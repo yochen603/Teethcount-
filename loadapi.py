@@ -15,7 +15,7 @@ def xyplane(filename):
     Zmax = np.max(your_mesh.vectors[:, :, 2])
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
-    num_planes = 20  # Number of XY planes to plot
+    num_planes = 5  # Number of XY planes to plot
     z_planes = np.linspace(Zmin + (Zmax - Zmin) * 0.40, Zmin + (Zmax - Zmin) * 0.60, num_planes)
 
     all_points = []
