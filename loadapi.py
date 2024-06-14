@@ -1,11 +1,12 @@
 import torch
-from torchvision.models import efficientnet_b0,resnext50_32x4d,mobilenet_v2
+from torchvision.models import efficientnet_b0, resnext50_32x4d, mobilenet_v2
 from PIL import Image
 from torchvision import transforms
 import numpy as np
 import matplotlib.pyplot as plt
 import io
 from stl import mesh
+import time
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -15,19 +16,16 @@ def xyplane(filename):
     Zmax = np.max(your_mesh.vectors[:, :, 2])
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
-    num_planes = 5  # Number of XY planes to plot
+    num_planes = 20  # Number of XY planes to plot
     z_planes = np.linspace(Zmin + (Zmax - Zmin) * 0.40, Zmin + (Zmax - Zmin) * 0.60, num_planes)
 
     all_points = []
 
     for z_plane in z_planes:
-        i_facets = 0
         points = []
-        for i in range(your_mesh.vectors.shape[0]):
-            facet = your_mesh.vectors[i, :, :]
+        for facet in your_mesh.vectors:
             z_coords = facet[:, 2]
             if np.min(z_coords) <= z_plane <= np.max(z_coords):
-                i_facets += 1
                 for j in range(3):
                     if (facet[j, 2] <= z_plane <= facet[(j + 1) % 3, 2]) or (
                         facet[(j + 1) % 3, 2] <= z_plane <= facet[j, 2]):
@@ -62,188 +60,96 @@ def xyplane(filename):
         print("No points found for the specified XY planes.")
         return None
 
-# Initialize the EfficientNet model architecture
-def model1(stl_file_path,input_image):
-    model = efficientnet_b0()
+def load_model(model_name, num_classes, model_path):
+    start_time = time.time()  # 开始时间
+    if model_name == 'efficientnet_b0':
+        model = efficientnet_b0()
+        model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
+    elif model_name == 'resnext50_32x4d':
+        model = resnext50_32x4d()
+        model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+    elif model_name == 'mobilenet_v2':
+        model = mobilenet_v2()
+        model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
 
-    # Modify the classifier layer to match the number of classes in your task
-    num_classes = 16  # Replace with the number of classes in your classification task
-    model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
-
-    # Load the saved model state dictionary
-    state_dict = torch.load('model1.pth')
-
-    # Load the state dictionary into the model
+    map_location = torch.device('cpu') if not torch.cuda.is_available() else None
+    state_dict = torch.load(model_path, map_location=map_location)
     model.load_state_dict(state_dict)
-
-    # Set the model to evaluation mode
+    model.to(device)
     model.eval()
 
-    # Define the data transformations for inference
+    load_time = time.time() - start_time  # 计算加载时间
+    return model,load_time
+
+def predict(model, input_image):
     inference_transforms = transforms.Compose([
         transforms.Resize((512, 512)),
         transforms.ToTensor(),
     ])
-
-    # Ask the user for the path to the STL file
-    #stl_file_path = input("Enter the path to the STL file: ")
-    
-    # Generate the XY plane plot and get the image
-    #input_image = xyplane(stl_file_path)
     
     if input_image:
-        # Preprocess the input image
-        input_tensor = inference_transforms(input_image)
-        input_batch = input_tensor.unsqueeze(0)
+        start_time = time.time()  # 开始时间
 
-        # Move the input batch to the same device as the model
-        input_batch = input_batch.to(device)
-        model.to(device)
+        input_tensor = inference_transforms(input_image)
+        input_batch = input_tensor.unsqueeze(0).to(device)
     
-        # Perform inference
         with torch.no_grad():
             outputs = model(input_batch)
     
-        # Get the predicted class probabilities
         probabilities = torch.softmax(outputs, dim=1)
-
-        # Get the predicted class index
         _, predicted_index = torch.max(probabilities, 1)
-        #print(predicted_index)
 
-        # Map the predicted index to the corresponding class label
-        class_labels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '16']  # Replace with your class labels
+        class_labels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '16']  
         predicted_label = class_labels[predicted_index.item()]
-    
-        #print('Model1 Predicted label:', predicted_label)
+
+        predict_time = time.time() - start_time  # 计算预测时间
+        return predicted_label,predict_time
     else:
         print("Failed to generate the XY plane plot.")
-    return predicted_label
+        return None
 
-# Initialize the resNext model architecture
-def model2(stl_file_path,input_image):
-    model = resnext50_32x4d()
+# def model1(stl_file_path, input_image):
+#     model = load_model('efficientnet_b0', 16, 'model1.pth')
+#     return predict(model, input_image)
 
-    # Modify the classifier layer to match the number of classes in your task
-    num_classes = 16  # Replace with the number of classes in your classification task
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+# def model2(stl_file_path, input_image):
+#     model = load_model('resnext50_32x4d', 16, 'model2.pth')
+#     return predict(model, input_image)
 
-    # Load the saved model state dictionary
-    state_dict = torch.load('model2.pth')
+# def model3(stl_file_path, input_image):
+#     model = load_model('mobilenet_v2', 16, 'model3.pth')
+#     return predict(model, input_image)
 
-    # Load the state dictionary into the model
-    model.load_state_dict(state_dict)
-
-    # Set the model to evaluation mode
-    model.eval()
-
-    # Define the data transformations for inference
-    inference_transforms = transforms.Compose([
-        transforms.Resize((512, 512)),
-        transforms.ToTensor(),
-    ])
-
-    # Ask the user for the path to the STL file
-    #stl_file_path = input("Enter the path to the STL file: ")
+# def get_final_prediction(stl_file_path, input_image):
+#     label1 = model1(stl_file_path, input_image)
+#     label2 = model2(stl_file_path, input_image)
+#     label3 = model3(stl_file_path, input_image)
     
-    # Generate the XY plane plot and get the image
-    #input_image = xyplane(stl_file_path)
-    
-    if input_image:
-        # Preprocess the input image
-        input_tensor = inference_transforms(input_image)
-        input_batch = input_tensor.unsqueeze(0)
+#     if label1 == label2:
+#         return label1
+#     elif label1 == label3 or label2 == label3:
+#         return label3
+#     else:
+#         return label1
 
-        # Move the input batch to the same device as the model
-        input_batch = input_batch.to(device)
-        model.to(device)
-    
-        # Perform inference
-        with torch.no_grad():
-            outputs = model(input_batch)
-    
-        # Get the predicted class probabilities
-        probabilities = torch.softmax(outputs, dim=1)
+def get_final_prediction(stl_file_path, input_image):
+    # 加载模型并记录时间
+    model1, load_time1 = load_model('efficientnet_b0', 16, 'model1.pth')
+    model2, load_time2 = load_model('resnext50_32x4d', 16, 'model2.pth')
+    model3, load_time3 = load_model('mobilenet_v2', 16, 'model3.pth')
 
-        # Get the predicted class index
-        _, predicted_index = torch.max(probabilities, 1)
-        #print(predicted_index)
+    # 预测并记录时间
+    label1, predict_time1 = predict(model1, input_image)
+    label2, predict_time2 = predict(model2, input_image)
+    label3, predict_time3 = predict(model3, input_image)
 
-        # Map the predicted index to the corresponding class label
-        class_labels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '16']  # Replace with your class labels
-        predicted_label = class_labels[predicted_index.item()]
-    
-        #print('Model2 Predicted label:', predicted_label)
+    # 选择预测结果
+    final_label = label1
+    if label1 == label2:
+        final_label = label1
+    elif label1 == label3 or label2 == label3:
+        final_label = label3
     else:
-        print("Failed to generate the XY plane plot.")
-    return predicted_label
+        final_label = label1
 
-# Initialize the mobilenet model architecture
-def model3(stl_file_path,input_image):
-    model = mobilenet_v2()
-
-    # Modify the classifier layer to match the number of classes in your task
-    num_classes = 16  # Replace with the number of classes in your classification task
-    model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
-
-    # Load the saved model state dictionary
-    state_dict = torch.load('model3.pth')
-
-    # Load the state dictionary into the model
-    model.load_state_dict(state_dict)
-
-    # Set the model to evaluation mode
-    model.eval()
-
-    # Define the data transformations for inference
-    inference_transforms = transforms.Compose([
-        transforms.Resize((512, 512)),
-        transforms.ToTensor(),
-    ])
-
-    # Ask the user for the path to the STL file
-    #stl_file_path = input("Enter the path to the STL file: ")
-    
-    # Generate the XY plane plot and get the image
-    #input_image = xyplane(stl_file_path)
-    
-    if input_image:
-        # Preprocess the input image
-        input_tensor = inference_transforms(input_image)
-        input_batch = input_tensor.unsqueeze(0)
-
-        # Move the input batch to the same device as the model
-        input_batch = input_batch.to(device)
-        model.to(device)
-    
-        # Perform inference
-        with torch.no_grad():
-            outputs = model(input_batch)
-    
-        # Get the predicted class probabilities
-        probabilities = torch.softmax(outputs, dim=1)
-
-        # Get the predicted class index
-        _, predicted_index = torch.max(probabilities, 1)
-        #print(predicted_index)
-
-        # Map the predicted index to the corresponding class label
-        class_labels = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '16']  # Replace with your class labels
-        predicted_label = class_labels[predicted_index.item()]
-    
-        #print('Model3 Predicted label:', predicted_label)
-    else:
-        print("Failed to generate the XY plane plot.")
-    return predicted_label
-
-stl_file_path=input("Enter the path to the STL file: ")
-input_image= xyplane(stl_file_path)
-label1=model1(stl_file_path,input_image)
-label2=model2(stl_file_path,input_image)
-label3=model2(stl_file_path,input_image)
-if label1==label2:
-    print('Predicted label:', label1)
-elif label1==label3 or label2==label3:
-    print('Predicted label:',label3)
-else:
-    print('Predicted label:',label1)
+    return final_label, (load_time1 + load_time2 + load_time3), (predict_time1 + predict_time2 + predict_time3)
