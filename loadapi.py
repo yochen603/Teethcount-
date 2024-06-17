@@ -15,8 +15,8 @@ def xyplane(filename):
     Zmax = np.max(your_mesh.vectors[:, :, 2])
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
-    num_planes = 5  # Number of XY planes to plot
-    z_planes = np.linspace(Zmin + (Zmax - Zmin) * 0.40, Zmin + (Zmax - Zmin) * 0.60, num_planes)
+    num_planes = 15  # Number of XY planes to plot
+    z_planes = np.linspace(Zmin + (Zmax - Zmin) * 0.30, Zmin + (Zmax - Zmin) * 0.70, num_planes)
 
     all_points = []
 
@@ -71,7 +71,7 @@ def model1(stl_file_path,input_image):
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
 
     # Load the saved model state dictionary
-    state_dict = torch.load('model1.pth')
+    state_dict = torch.load('efficientnet_size512_epoch25_0.0001.pth')
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -241,9 +241,15 @@ input_image= xyplane(stl_file_path)
 label1=model1(stl_file_path,input_image)
 label2=model2(stl_file_path,input_image)
 label3=model2(stl_file_path,input_image)
-if label1==label2:
-    print('Predicted label:', label1)
-elif label1==label3 or label2==label3:
-    print('Predicted label:',label3)
+if int(label2)<=5 and int(label3)<=5:
+    print("label:",label2)
 else:
-    print('Predicted label:',label1)
+    print("label:",label1)
+
+#if label1==label2:
+#    print('Predicted label:', label1)
+#elif label1==label3 or label2==label3:
+#    print('Predicted label:',label3)
+#else:
+#    print('Predicted label:',label1)
+
