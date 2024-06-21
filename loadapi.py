@@ -61,6 +61,49 @@ def xyplane(filename):
     else:
         print("No points found for the specified XY planes.")
         return None
+        
+def xyplane_fast(filename):
+    your_mesh = mesh.Mesh.from_file(filename)
+
+    Zmin = np.min(your_mesh.z)
+    Zmax = np.max(your_mesh.z)
+    print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
+
+    num_planes = 20  # Number of XY planes to plot
+    alpha = 0.5
+    beta = 0.6
+    z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    for z_plane in z_planes:
+        # Get the vertices of the mesh
+        vertices = your_mesh.vectors.reshape(-1, 3)
+
+        # Filter vertices based on the Z-plane
+        mask = (vertices[:, 2] >= z_plane - 0.01) & (vertices[:, 2] <= z_plane + 0.01)
+        selected_vertices = vertices[mask]
+
+        # Plot the selected vertices
+        ax.scatter(selected_vertices[:, 0], selected_vertices[:, 1], s=5, zorder=10, color='blue', linewidths=0.5)
+
+    ax.set_aspect('equal')
+    ax.axis('off')  # Remove the axes
+    plt.tight_layout()
+
+    # Save the plot to a bytes buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
+    plt.close(fig)
+    buf.seek(0)
+
+    # Create a PIL Image from the bytes buffer
+    image = Image.open(buf)
+    image = image.convert('RGB')
+
+    print("XY plane plot generated")
+    return image
+
 
 # Initialize the EfficientNet model architecture
 def model1(stl_file_path,input_image):
