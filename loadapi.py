@@ -4,6 +4,7 @@ from PIL import Image
 from torchvision import transforms
 import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import io
 from stl import mesh
 
@@ -43,49 +44,6 @@ def xyplane(filename):
         ax.axis('off')  # Remove the axes
         plt.tight_layout()
 
-        # Save the plot to a bytes buffer
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
-        print("Image into buffer")
-        buf.seek(0)
-
-        # Create a PIL Image from the bytes buffer
-        image = Image.open(buf)
-        image = image.convert('RGB') 
-        return image
-    else:
-        print("No points found for the specified XY planes.")
-        return None
-        
-def xyplane_fast(filename):
-    your_mesh = mesh.Mesh.from_file(filename)
-
-    Zmin = np.min(your_mesh.z)
-    Zmax = np.max(your_mesh.z)
-    print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
-
-    num_planes = 20  # Number of XY planes to plot
-    alpha = 0.4
-    beta = 0.6
-    z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
-
-    fig, ax = plt.subplots(figsize=(8, 8))
-
-    for z_plane in z_planes:
-        # Get the vertices of the mesh
-        vertices = your_mesh.vectors.reshape(-1, 3)
-
-        # Filter vertices based on the Z-plane
-        mask = (vertices[:, 2] >= z_plane - 0.01) & (vertices[:, 2] <= z_plane + 0.01)
-        selected_vertices = vertices[mask]
-
-        # Plot the selected vertices
-        ax.scatter(selected_vertices[:, 0], selected_vertices[:, 1], s=5, zorder=10, color='blue', linewidths=0.5)
-
-    ax.set_aspect('equal')
-    ax.axis('off')  # Remove the axes
-    plt.tight_layout()
-
     # Save the plot to a bytes buffer
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
@@ -99,7 +57,6 @@ def xyplane_fast(filename):
     print("XY plane plot generated")
     return image
 
-
 # Initialize the EfficientNet model architecture
 def model1(stl_file_path,input_image):
     model = efficientnet_b0()
@@ -109,7 +66,7 @@ def model1(stl_file_path,input_image):
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
 
     # Load the saved model state dictionary
-    state_dict = torch.load('efficientnet_size512_epoch25_0.0001.pth')
+    state_dict = torch.load('efficientnet_size512_epoch25_0.0001_fast.pth')
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -277,17 +234,17 @@ def model3(stl_file_path,input_image):
 stl_file_path=input("Enter the path to the STL file: ")
 input_image= xyplane(stl_file_path)
 label1=model1(stl_file_path,input_image)
-label2=model2(stl_file_path,input_image)
-label3=model2(stl_file_path,input_image)
-if int(label2)<=5 and int(label3)<=5:
-    print("label:",label2)
-else:
-    print("label:",label1)
+#label2=model2(stl_file_path,input_image)
+#label3=model2(stl_file_path,input_image)
+#if int(label2)<=5 and int(label3)<=5:
+#    print("label:",label2)
+#else:
+#   print("label:",label1)
 
 #if label1==label2:
 #    print('Predicted label:', label1)
 #elif label1==label3 or label2==label3:
 #    print('Predicted label:',label3)
 #else:
-#    print('Predicted label:',label1)
+print('Predicted label:',label1)
 
