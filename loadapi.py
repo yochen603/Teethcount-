@@ -11,40 +11,35 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def xyplane(filename):
     your_mesh = mesh.Mesh.from_file(filename)
-    Zmin = np.min(your_mesh.vectors[:, :, 2])
-    Zmax = np.max(your_mesh.vectors[:, :, 2])
+
+    Zmin = np.min(your_mesh.z)
+    Zmax = np.max(your_mesh.z)
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
-    num_planes = 15  # Number of XY planes to plot
-    z_planes = np.linspace(Zmin + (Zmax - Zmin) * 0.30, Zmin + (Zmax - Zmin) * 0.70, num_planes)
+    num_planes = 20  # Number of XY planes to plot
+    alpha = 0.4
+    beta = 0.6
+    z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
 
     all_points = []
 
     for z_plane in z_planes:
-        i_facets = 0
-        points = []
-        for i in range(your_mesh.vectors.shape[0]):
-            facet = your_mesh.vectors[i, :, :]
-            z_coords = facet[:, 2]
-            if np.min(z_coords) <= z_plane <= np.max(z_coords):
-                i_facets += 1
-                for j in range(3):
-                    if (facet[j, 2] <= z_plane <= facet[(j + 1) % 3, 2]) or (
-                        facet[(j + 1) % 3, 2] <= z_plane <= facet[j, 2]):
-                        t = (z_plane - facet[j, 2]) / (facet[(j + 1) % 3, 2] - facet[j, 2])
-                        point = facet[j, :] + t * (facet[(j + 1) % 3, :] - facet[j, :])
-                        points.append(point)
+        # Get the vertices of the mesh
+        vertices = your_mesh.vectors.reshape(-1, 3)
 
-        points = np.array(points)
-        if len(points) > 0:
-            points = points[:, :2]  # Extract only the x and y coordinates
-            all_points.extend(points)
+        # Filter vertices based on the Z-plane
+        mask = (vertices[:, 2] >= z_plane - 0.01) & (vertices[:, 2] <= z_plane + 0.01)
+        selected_vertices = vertices[mask]
+
+        # Add selected vertices to all_points
+        all_points.extend(selected_vertices[:, :2])
 
     all_points = np.array(all_points)
 
     if len(all_points) > 0:
         fig, ax = plt.subplots(figsize=(8, 8))
-        ax.scatter(all_points[:, 0], all_points[:, 1], s=5)
+        ax.scatter(all_points[:, 0], all_points[:, 1], s=1, color='black', alpha=0.5)
+        ax.set_aspect('equal')
         ax.axis('off')  # Remove the axes
         plt.tight_layout()
 
@@ -70,7 +65,7 @@ def xyplane_fast(filename):
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
     num_planes = 20  # Number of XY planes to plot
-    alpha = 0.5
+    alpha = 0.4
     beta = 0.6
     z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
 
