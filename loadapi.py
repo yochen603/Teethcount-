@@ -8,7 +8,7 @@ import numpy as np
 import io
 from stl import mesh
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
 def xyplane(filename):
     your_mesh = mesh.Mesh.from_file(filename)
@@ -17,8 +17,8 @@ def xyplane(filename):
     Zmax = np.max(your_mesh.z)
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
-    num_planes = 20  # Number of XY planes to plot
-    alpha = 0.4
+    num_planes = 30  # Number of XY planes to plot
+    alpha = 0.3
     beta = 0.6
     z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
 
@@ -66,7 +66,7 @@ def model1(stl_file_path,input_image):
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
 
     # Load the saved model state dictionary
-    state_dict = torch.load('efficientnet_size512_epoch25_0.0001_fast.pth')
+    state_dict = torch.load('mobilenet_size512_epoch25_0.0001_fast.pth',  map_location=torch.device('cpu'))
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
