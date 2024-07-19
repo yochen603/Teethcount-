@@ -1,5 +1,5 @@
 import torch
-from torchvision.models import efficientnet_b0,resnext50_32x4d,mobilenet_v2
+from torchvision.models import efficientnet_b0,resnext50_32x4d,mobilenet_v2,efficientnet_b1
 from PIL import Image
 from torchvision import transforms
 import numpy as np
@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import io
 from stl import mesh
+import statistics 
 
 device = torch.device('cpu')
 
-def xyplane(filename):
+def xyplane(filename,alpha,beta):
     your_mesh = mesh.Mesh.from_file(filename)
 
     Zmin = np.min(your_mesh.z)
@@ -18,8 +19,8 @@ def xyplane(filename):
     print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
     num_planes = 30  # Number of XY planes to plot
-    alpha = 0.3
-    beta = 0.6
+    #alpha = 0.4
+    #beta = 0.7
     z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
 
     all_points = []
@@ -59,14 +60,14 @@ def xyplane(filename):
 
 # Initialize the EfficientNet model architecture
 def model1(stl_file_path,input_image):
-    model = efficientnet_b0()
+    model = efficientnet_b1()
 
     # Modify the classifier layer to match the number of classes in your task
     num_classes = 16  # Replace with the number of classes in your classification task
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
 
     # Load the saved model state dictionary
-    state_dict = torch.load('mobilenet_size512_epoch25_0.0001_fast.pth',  map_location=torch.device('cpu'))
+    state_dict = torch.load('efficientv1_size512_epoch25_0.0001.pth',  map_location=torch.device('cpu'))
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -117,14 +118,14 @@ def model1(stl_file_path,input_image):
 
 # Initialize the resNext model architecture
 def model2(stl_file_path,input_image):
-    model = resnext50_32x4d()
+    model = efficientnet_b0()
 
     # Modify the classifier layer to match the number of classes in your task
     num_classes = 16  # Replace with the number of classes in your classification task
-    model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
-
-    # Load the saved model state dictionary
-    state_dict = torch.load('model2.pth')
+    model.classifier[1] =torch.nn.Linear(model.classifier[1].in_features, num_classes)
+    
+   # Load the saved model state dictionary
+    state_dict = torch.load('efficientnetb0_size512_epoch25_0.0001_fast.pth')
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -232,9 +233,15 @@ def model3(stl_file_path,input_image):
     return predicted_label
 
 stl_file_path=input("Enter the path to the STL file: ")
-input_image= xyplane(stl_file_path)
-label1=model1(stl_file_path,input_image)
-#label2=model2(stl_file_path,input_image)
+input_image1= xyplane(stl_file_path,0.4,0.7)
+input_image2= xyplane(stl_file_path,0.3,0.6)
+input_image3= xyplane(stl_file_path,0.3,0.7)
+label1=model1(stl_file_path,input_image1)
+label2=model2(stl_file_path,input_image1)
+label3=model1(stl_file_path,input_image2)
+label4=model2(stl_file_path,input_image2)
+label5=model1(stl_file_path,input_image3)
+label6=model2(stl_file_path,input_image3)
 #label3=model2(stl_file_path,input_image)
 #if int(label2)<=5 and int(label3)<=5:
 #    print("label:",label2)
@@ -247,4 +254,9 @@ label1=model1(stl_file_path,input_image)
 #    print('Predicted label:',label3)
 #else:
 print('Predicted label:',label1)
-
+print('Predicted label:',label2)
+print('Predicted label:',label3)
+print('Predicted label:',label4)
+print('Predicted label:',label5)
+print('Predicted label:',label6)
+print("final label", statistics.mode([label1,label2,label3,label4,label5,label6]))
