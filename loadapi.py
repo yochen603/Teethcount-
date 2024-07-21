@@ -5,9 +5,11 @@ from torchvision import transforms
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
-import io
+import io,os
 from stl import mesh
 import statistics 
+import openpyxl
+from openpyxl import load_workbook
 
 device = torch.device('cpu')
 
@@ -58,16 +60,66 @@ def xyplane(filename,alpha,beta):
     print("XY plane plot generated")
     return image
 
+
+def xyplane_fast(filename, alpha, beta):
+    your_mesh = mesh.Mesh.from_file(filename)
+
+    Zmin = np.min(your_mesh.z)
+    Zmax = np.max(your_mesh.z)
+    print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
+
+    num_planes = 20  # Number of XY planes to plot
+    z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
+
+    all_points = []
+
+    # Vectorized operations
+    triangles = your_mesh.vectors
+    z_coords = triangles[:, :, 2]
+
+    for z_plane in z_planes:
+        mask = (np.min(z_coords, axis=1) <= z_plane) & (np.max(z_coords, axis=1) >= z_plane)
+        valid_triangles = triangles[mask]
+
+        for triangle in valid_triangles:
+            for i in range(3):
+                j = (i + 1) % 3
+                if (triangle[i, 2] <= z_plane <= triangle[j, 2]) or (triangle[j, 2] <= z_plane <= triangle[i, 2]):
+                    t = (z_plane - triangle[i, 2]) / (triangle[j, 2] - triangle[i, 2])
+                    point = triangle[i] + t * (triangle[j] - triangle[i])
+                    all_points.append(point[:2])
+
+    all_points = np.array(all_points)
+
+    if len(all_points) > 0:
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.scatter(all_points[:, 0], all_points[:, 1], s=5, color='black')
+        ax.set_aspect('equal')
+        ax.axis('off')  # Remove the axes
+        plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
+    plt.close(fig)
+    buf.seek(0)
+
+    # Create a PIL Image from the bytes buffer
+    image = Image.open(buf)
+    image = image.convert('RGB')
+
+    print("XY plane plot generated")
+    return image
+
 # Initialize the EfficientNet model architecture
-def model1(stl_file_path,input_image):
-    model = efficientnet_b1()
+def model1(input_image):
+    model = efficientnet_b0()
 
     # Modify the classifier layer to match the number of classes in your task
     num_classes = 16  # Replace with the number of classes in your classification task
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
 
     # Load the saved model state dictionary
-    state_dict = torch.load('efficientv1_size512_epoch25_0.0001.pth',  map_location=torch.device('cpu'))
+    state_dict = torch.load('720_efficientv0_size512_epoch25_0.0001.pth',  map_location=torch.device('cpu'))
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -117,15 +169,15 @@ def model1(stl_file_path,input_image):
     return predicted_label
 
 # Initialize the resNext model architecture
-def model2(stl_file_path,input_image):
-    model = efficientnet_b0()
+def model2(input_image):
+    model = efficientnet_b1()
 
     # Modify the classifier layer to match the number of classes in your task
     num_classes = 16  # Replace with the number of classes in your classification task
     model.classifier[1] =torch.nn.Linear(model.classifier[1].in_features, num_classes)
     
    # Load the saved model state dictionary
-    state_dict = torch.load('efficientnetb0_size512_epoch25_0.0001_fast.pth')
+    state_dict = torch.load('efficientv1_size512_epoch25_0.0001.pth')
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -232,31 +284,44 @@ def model3(stl_file_path,input_image):
         print("Failed to generate the XY plane plot.")
     return predicted_label
 
-stl_file_path=input("Enter the path to the STL file: ")
-input_image1= xyplane(stl_file_path,0.4,0.7)
-input_image2= xyplane(stl_file_path,0.3,0.6)
-input_image3= xyplane(stl_file_path,0.3,0.7)
-label1=model1(stl_file_path,input_image1)
-label2=model2(stl_file_path,input_image1)
-label3=model1(stl_file_path,input_image2)
-label4=model2(stl_file_path,input_image2)
-label5=model1(stl_file_path,input_image3)
-label6=model2(stl_file_path,input_image3)
-#label3=model2(stl_file_path,input_image)
-#if int(label2)<=5 and int(label3)<=5:
-#    print("label:",label2)
-#else:
-#   print("label:",label1)
+wb = load_workbook('stl.xlsx')
+ws = wb.active
+for row in ws.iter_rows(min_row=2, max_col=2, max_row=ws.max_row):
+    file_number = str(row[0].value)
+    if file_number:
+        # Construct the filename
+        filename = f"{file_number}.stl"
+        stl_file_path = os.path.join("new", filename)
+        
+        print(f"Processing: {stl_file_path}")
+        
+        if os.path.isfile(stl_file_path):
+            input_image1 = xyplane_fast(stl_file_path, 0.1, 0.9)
+            if input_image1 is not None:
+                label1 = model1(input_image1)
+                print('Predicted label:', label1)
+                
+                # Update the Excel file with the prediction
+                row[1].value = label1
+        else:
+            print(f"File not found: {stl_file_path}")
 
-#if label1==label2:
-#    print('Predicted label:', label1)
-#elif label1==label3 or label2==label3:
-#    print('Predicted label:',label3)
-#else:
-print('Predicted label:',label1)
-print('Predicted label:',label2)
-print('Predicted label:',label3)
-print('Predicted label:',label4)
-print('Predicted label:',label5)
-print('Predicted label:',label6)
-print("final label", statistics.mode([label1,label2,label3,label4,label5,label6]))
+# Save the updated Excel file
+wb.save('stl_updated.xlsx')
+print("Excel file updated with predictions.")
+
+#stl_file_path=input("Enter the path to the STL file: ")
+
+
+#input_image1= xyplane_fast(stl_file_path,0.1,0.9)
+#label1=model1(input_image1)
+
+#input_image2= xyplane(stl_file_path,0.3,0.7)
+#label2=model2(input_image2)
+
+
+
+#print('Predicted label:',label1)
+#print('Predicted label:',label2)
+    
+#print("final label", statistics.mode([label1,label2,label3,label4,label5,label6]))
