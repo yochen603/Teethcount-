@@ -169,15 +169,14 @@ def model1(input_image):
     return predicted_label
 
 # Initialize the resNext model architecture
-def model2(input_image):
-    model = efficientnet_b1()
-
+def model_4567(input_image):
+    model = efficientnet_b0()
     # Modify the classifier layer to match the number of classes in your task
     num_classes = 16  # Replace with the number of classes in your classification task
-    model.classifier[1] =torch.nn.Linear(model.classifier[1].in_features, num_classes)
+    model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
     
    # Load the saved model state dictionary
-    state_dict = torch.load('efficientv1_size512_epoch25_0.0001.pth')
+    state_dict = torch.load('4567_efficientv0_size512_epoch25_0.0001.pth')
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -227,15 +226,15 @@ def model2(input_image):
     return predicted_label
 
 # Initialize the mobilenet model architecture
-def model3(stl_file_path,input_image):
-    model = mobilenet_v2()
+def model_914(input_image):
+    model = efficientnet_b0()
 
     # Modify the classifier layer to match the number of classes in your task
     num_classes = 16  # Replace with the number of classes in your classification task
     model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, num_classes)
-
+ 
     # Load the saved model state dictionary
-    state_dict = torch.load('model3.pth')
+    state_dict = torch.load('914_efficientnetV0_size512_epoch25_0.0001.pth')
 
     # Load the state dictionary into the model
     model.load_state_dict(state_dict)
@@ -299,7 +298,8 @@ for row in ws.iter_rows(min_row=2, max_col=2, max_row=ws.max_row):
             input_image1 = xyplane_fast(stl_file_path, 0.1, 0.9)
             if input_image1 is not None:
                 label1 = model1(input_image1)
-                print('Predicted label:', label1)
+                if label1 >= 4 and label2 <= 7:
+                    label1= model_4567(input_image1)
                 
                 # Update the Excel file with the prediction
                 row[1].value = label1
@@ -315,13 +315,14 @@ print("Excel file updated with predictions.")
 
 #input_image1= xyplane_fast(stl_file_path,0.1,0.9)
 #label1=model1(input_image1)
-
+#label2=model_4567(input_image1)
+#label3=model_914(input_image1)
 #input_image2= xyplane(stl_file_path,0.3,0.7)
 #label2=model2(input_image2)
 
 
 
-#print('Predicted label:',label1)
-#print('Predicted label:',label2)
-    
+#print('Predicted label1:',label1)
+#print('Predicted label2:',label2)
+#print('Predicted label3:',label2)
 #print("final label", statistics.mode([label1,label2,label3,label4,label5,label6]))
