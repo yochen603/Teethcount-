@@ -296,11 +296,13 @@ for row in ws.iter_rows(min_row=2, max_col=2, max_row=ws.max_row):
         
         if os.path.isfile(stl_file_path):
             input_image1 = xyplane_fast(stl_file_path, 0.1, 0.9)
+            #input_image2 = xyplane_fast(stl_file_path, 0, 1)
             if input_image1 is not None:
                 label1 = model1(input_image1)
                 if label1 >= 4 and label2 <= 7:
                     label1= model_4567(input_image1)
-                
+                if label1 >=9:
+                    label1 = model_914(input_image1)
                 # Update the Excel file with the prediction
                 row[1].value = label1
         else:
@@ -314,9 +316,11 @@ print("Excel file updated with predictions.")
 
 
 #input_image1= xyplane_fast(stl_file_path,0.1,0.9)
+#input_image2= xyplane_fast(stl_file_path,0, 1)
 #label1=model1(input_image1)
 #label2=model_4567(input_image1)
-#label3=model_914(input_image1)
+#label914= model_914(input_image1)
+#label3=model1(input_image2)
 #input_image2= xyplane(stl_file_path,0.3,0.7)
 #label2=model2(input_image2)
 
@@ -324,5 +328,6 @@ print("Excel file updated with predictions.")
 
 #print('Predicted label1:',label1)
 #print('Predicted label2:',label2)
-#print('Predicted label3:',label2)
+#print('Predicted label914:',label914)
+#print('Predicted label3:',label3)
 #print("final label", statistics.mode([label1,label2,label3,label4,label5,label6]))
