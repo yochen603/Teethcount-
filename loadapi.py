@@ -66,7 +66,7 @@ def xyplane_fast(filename, alpha, beta):
 
     Zmin = np.min(your_mesh.z)
     Zmax = np.max(your_mesh.z)
-    print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
+    #print(f"Minimum Z value in the mesh is {Zmin}, and maximum Z value is {Zmax}")
 
     num_planes = 20  # Number of XY planes to plot
     z_planes = np.linspace(Zmin + (Zmax - Zmin) * alpha, Zmin + (Zmax - Zmin) * beta, num_planes)
@@ -107,7 +107,7 @@ def xyplane_fast(filename, alpha, beta):
     image = Image.open(buf)
     image = image.convert('RGB')
 
-    print("XY plane plot generated")
+    #print("XY plane plot generated")
     return image
 
 # Initialize the EfficientNet model architecture
@@ -295,16 +295,35 @@ for row in ws.iter_rows(min_row=2, max_col=2, max_row=ws.max_row):
         print(f"Processing: {stl_file_path}")
         
         if os.path.isfile(stl_file_path):
-            input_image1 = xyplane_fast(stl_file_path, 0.1, 0.9)
-            #input_image2 = xyplane_fast(stl_file_path, 0, 1)
-            if input_image1 is not None:
-                label1 = model1(input_image1)
-                if label1 >= 4 and label2 <= 7:
+            input_image1 = xyplane_fast(stl_file_path, 0, 1)
+            input_image2 = xyplane_fast(stl_file_path, 0.1, 0.9)
+            input_image3 = xyplane_fast(stl_file_path, 0.2, 0.8)
+            input_image4 = xyplane_fast(stl_file_path, 0.3, 0.7)
+            input_image5 = xyplane_fast(stl_file_path, 0.4, 0.6)
+            """if input_image1 is not None:
+                label1 = int(model1(input_image1))
+                if label1 >= 4 and label1 <= 7:
                     label1= model_4567(input_image1)
-                if label1 >=9:
-                    label1 = model_914(input_image1)
-                # Update the Excel file with the prediction
-                row[1].value = label1
+
+            if input_image2 is not None:
+                label2 = int(model1(input_image2))
+                if label2 >= 4 and label2 <= 7:
+                    label2= model_4567(input_image2)
+
+            if input_image3 is not None:
+                label3 = int(model1(input_image3))
+                if label3 >= 4 and label3<= 7:
+                    label3= model_4567(input_image3)"""
+
+            label1 = int(model1(input_image1))
+            label2 = int(model1(input_image2))
+            label3 = int(model1(input_image3))
+            label4 = int(model1(input_image4)) 
+            label5 = int(model1(input_image5)) 
+            # Update the Excel file with the prediction
+            print("all labels:",label1,label2,label3,label4,label5)
+            row[1].value = statistics.mode([label1,label2,label3,label4,label5])
+            print(row[1].value)
         else:
             print(f"File not found: {stl_file_path}")
 
